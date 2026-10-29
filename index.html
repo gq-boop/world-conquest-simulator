@@ -1,0 +1,166 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>World Conquest Simulator</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b1220;color:#eaf1fb;font:14px system-ui,Arial}
+header{padding:16px;background:#111c2e;border-bottom:1px solid #34445b}
+h1{margin:0;font-size:24px}
+p{color:#a8bad0}
+main{max-width:1400px;margin:auto;padding:12px;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px}
+.panel{background:#111c2e;border:1px solid #34445b;border-radius:10px;overflow:hidden}
+.heading{padding:12px;border-bottom:1px solid #34445b;font-weight:bold}
+#map{width:100%;min-height:300px;background:#091522;display:block}
+button{padding:10px;margin:3px;border:1px solid #50647e;border-radius:7px;background:#20334b;color:white;font-weight:bold}
+button.primary{background:#f0a83b;color:#201707}
+.pad{padding:12px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{padding:10px;background:#1b2b42;border-radius:7px}
+.num{font-size:23px;font-weight:bold}
+#log{max-height:300px;overflow:auto}
+.entry{padding:9px;margin:6px 0;background:#1b2b42;border-left:3px solid #f0a83b;border-radius:5px}
+.country{stroke:#101a27;stroke-width:.6;cursor:pointer}
+.country:hover{stroke:white;stroke-width:1.5}
+@media(max-width:800px){main{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+<h1>🌍 World Conquest Simulator</h1>
+<div id="status">Loading world map...</div>
+</header>
+<main>
+<section class="panel">
+<div class="heading">WORLD MAP</div>
+<svg id="map" viewBox="0 0 960 540" aria-label="World map"></svg>
+<div class="pad"><small>Tap a country to inspect it. Map boundaries load from an external data source.</small></div>
+</section>
+<aside>
+<section class="panel">
+<div class="heading">SIMULATION CONTROL</div>
+<div class="pad">
+<div class="stats">
+<div class="stat">Year<div class="num" id="year">2026</div></div>
+<div class="stat">Wars<div class="num" id="wars">0</div></div>
+<div class="stat">Countries<div class="num" id="count">—</div></div>
+<div class="stat">Conquests<div class="num" id="conquests">0</div></div>
+</div>
+<p>
+<button class="primary" id="start" disabled>▶ Start</button>
+<button id="next" disabled>⚔ Next War</button>
+<button id="pause" disabled>Ⅱ Pause</button>
+<button id="reset" disabled>↻ New Game</button>
+</p>
+<div id="info">Select a country on the map.</div>
+</div>
+</section>
+<section class="panel" style="margin-top:12px">
+<div class="heading">EVENT LOG</div>
+<div class="pad" id="log">Waiting for map data...</div>
+</section>
+</aside>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+<script>
+(()=>{
+"use strict";
+const $=id=>document.getElementById(id);
+const palette=["#4c82bc","#6a9d78","#9b79bb","#c77d67","#4caaa6","#b69b4e","#7e8fa9","#bc739c","#779cba","#8caa62"];
+let countries=[],running=false,timer=null,year=2026,wars=0,conquests=0,selected=null,svg=null,path=null,projection=null;
+function log(s){
+ if($("log").textContent==="Waiting for map data...")$("log").textContent="";
+ const d=document.createElement("div");d.className="entry";d.textContent="Year "+year+" — "+s;$("log").prepend(d);
+}
+function stats(){
+ $("year").textContent=year;$("wars").textContent=wars;$("count").textContent=countries.length;$("conquests").textContent=conquests;
+}
+function safe(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function detail(c){
+ selected=c;
+ $("info").innerHTML=c?("<b>"+safe(c.name)+"</b><br>Controller: "+safe(c.ownerName)+"<br>Population index: "+Math.round(c.population)+"<br>Military strength: "+Math.round(c.military)+"<br>Status: "+(c.active?"Active":"Conquered")):"Select a country on the map.";
+}
+function redraw(){
+ if(!svg)return;
+ svg.selectAll(".country").attr("fill",f=>{
+  const c=countries.find(x=>x.id===String(f.id));
+  return c?(c.active?palette[c.color%palette.length]:"#3b4656"):"#3b4656";
+ });
+}
+function build(topology){
+ if(!window.d3||!window.topojson)throw Error("Map libraries failed to load.");
+ const object=topology.objects.countries;
+ const features=topojson.feature(topology,object).features;
+ countries=features.map((f,i)=>{
+  const p=f.properties||{};
+  const name=p.name||p.NAME||p.admin||p.ADMIN||("Country "+f.id);
+  return {id:String(f.id),name,ownerName:name,color:i%palette.length,population:100+Math.random()*900,military:30+Math.random()*70,active:true,feature:f,territory:1};
+ });
+ svg=d3.select("#map");
+ projection=d3.geoNaturalEarth1().fitExtent([[5,5],[950,535]],{type:"FeatureCollection",features});
+ path=d3.geoPath(projection);
+ svg.selectAll("*").remove();
+ svg.append("g").selectAll("path").data(features).join("path")
+  .attr("class","country").attr("d",path)
+  .attr("fill",(f,i)=>palette[i%palette.length])
+  .on("click",(e,f)=>{const c=countries.find(x=>x.id===String(f.id));detail(c)});
+ $("status").textContent="World map loaded";
+ ["start","next","pause","reset"].forEach(id=>$(id).disabled=false);
+ $("log").textContent="";log("World map loaded. New simulation initialized.");stats();
+}
+function war(){
+ const active=countries.filter(c=>c.active);
+ if(active.length<2){stop();log("Simulation ended: no active countries remain.");return}
+ const a=active[Math.floor(Math.random()*active.length)];
+ const pool=active.filter(c=>c!==a);
+ const b=pool[Math.floor(Math.random()*pool.length)];
+ const as=a.military*(.7+Math.random()*.6)+a.population*.08;
+ const bs=b.military*(.7+Math.random()*.6)+b.population*.08;
+ const winner=as>=bs?a:b,loser=winner===a?b:a;
+ wars++;year++;
+ loser.military=Math.max(1,loser.military-8-Math.random()*12);
+ loser.population=Math.max(1,loser.population-5-Math.random()*15);
+ winner.military=Math.min(150,winner.military+3);
+ let msg=a.name+" fought "+b.name+". "+winner.name+" won.";
+ if(Math.random()<.4){
+  loser.active=false;loser.ownerName=winner.ownerName;winner.territory+=loser.territory;conquests++;
+  msg+=" "+winner.name+" conquered "+loser.name+".";
+ }else msg+=" No territory changed.";
+ log(msg);stats();redraw();if(selected)detail(selected);
+}
+function stop(){running=false;if(timer)clearInterval(timer);timer=null;$("start").textContent="▶ Start"}
+function start(){if(running)return;running=true;$("start").textContent="Ⅱ Running";timer=setInterval(war,2200)}
+function reset(){
+ stop();year=2026;wars=0;conquests=0;
+ countries.forEach(c=>{c.ownerName=c.name;c.active=true;c.population=100+Math.random()*900;c.military=30+Math.random()*70;c.territory=1});
+ $("log").textContent="";log("New simulation started.");detail(null);stats();redraw();
+}
+$("start").onclick=()=>running?stop():start();
+$("next").onclick=war;
+$("pause").onclick=()=>running?stop():start();
+$("reset").onclick=reset;
+async function init(){
+ try{
+  if(!window.d3)throw Error("D3 library did not load. Check your connection.");
+  if(!window.topojson)throw Error("TopoJSON library did not load. Check your connection.");
+  const topology=await d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json");
+  if(!topology||!topology.objects||!topology.objects.countries)throw Error("Map data format was unexpected.");
+  build(topology);
+ }catch(e){
+  $("status").textContent="Map failed to load";
+  $("map").innerHTML="";
+  const t=document.createElementNS("http://www.w3.org/2000/svg","text");
+  t.setAttribute("x","480");t.setAttribute("y","245");t.setAttribute("fill","#ffaaaa");t.setAttribute("text-anchor","middle");t.setAttribute("font-size","18");
+  t.textContent="Map error: "+(e.message||String(e));$("map").appendChild(t);
+  $("log").textContent="Error loading map: "+(e.message||String(e));
+ }
+}
+init();
+})();
+</script>
+</body>
+</html>
