@@ -28,7 +28,7 @@ button.primary{background:var(--gold);color:#211607;border-color:var(--gold)}
 #log{max-height:300px;overflow:auto}
 .entry{padding:9px;margin:6px 0;background:#1b2a40;border-left:3px solid var(--gold);border-radius:4px;font-size:12px}
 #info{line-height:1.7;overflow-wrap:anywhere}
-#info img{width:35px;vertical-align:middle;margin-right:8px}
+#info img{width:40px;vertical-align:middle;margin-right:8px}
 .progress{height:5px;background:#304158;border-radius:5px;overflow:hidden;margin-top:5px}
 .progress span{display:block;height:100%;background:var(--gold)}
 @media(max-width:850px){main{grid-template-columns:1fr}}
@@ -37,41 +37,41 @@ button.primary{background:var(--gold);color:#211607;border-color:var(--gold)}
 </head>
 <body>
 <header>
- <div><h1>🌍 World Conquest Simulator</h1><small>Alternate history • Global wars • Empire expansion</small></div>
- <div id="status">Loading map…</div>
+<div><h1>🌍 World Conquest Simulator</h1><small>Alternate history • Global wars • Empire expansion</small></div>
+<div id="status">Loading map…</div>
 </header>
 <main>
 <section class="panel">
- <div class="heading">WORLD MAP · FLAGS SHOW TERRITORIAL CONTROL</div>
- <svg id="map" viewBox="0 0 960 540" role="img" aria-label="World map"></svg>
- <div class="pad"><small>Tap a country to inspect it. Flags change when territory is conquered. Tiny countries may be difficult to distinguish at this zoom.</small></div>
+<div class="heading">WORLD MAP · FLAGS SHOW TERRITORIAL CONTROL</div>
+<svg id="map" viewBox="0 0 960 540" role="img" aria-label="World map"></svg>
+<div class="pad"><small>Tap any country to inspect it. Conquered territories remain visible and adopt their controller's flag.</small></div>
 </section>
 <aside>
 <section class="panel">
- <div class="heading">SIMULATION CONTROL</div>
- <div class="pad">
-  <div class="stats">
-   <div class="stat">Year<div class="num" id="year">2026</div></div>
-   <div class="stat">Wars<div class="num" id="wars">0</div></div>
-   <div class="stat">Empires<div class="num" id="empires">—</div></div>
-   <div class="stat">Conquests<div class="num" id="conquests">0</div></div>
-  </div>
-  <p>
-   <button class="primary" id="start" disabled>▶ Start</button>
-   <button id="next" disabled>⚔ Next War</button>
-   <button id="pause" disabled>Ⅱ Pause</button>
-   <button id="reset" disabled>↻ New Simulation</button>
-  </p>
-  <small>Wars happen automatically between eligible neighboring territories. Each war uses best-of-three D6 battles.</small>
- </div>
+<div class="heading">SIMULATION CONTROL</div>
+<div class="pad">
+<div class="stats">
+<div class="stat">Year<div class="num" id="year">2026</div></div>
+<div class="stat">Wars<div class="num" id="wars">0</div></div>
+<div class="stat">Empires<div class="num" id="empires">—</div></div>
+<div class="stat">Conquests<div class="num" id="conquests">0</div></div>
+</div>
+<p>
+<button class="primary" id="start" disabled>▶ Start</button>
+<button id="next" disabled>⚔ Next War</button>
+<button id="pause" disabled>Ⅱ Pause</button>
+<button id="reset" disabled>↻ New Simulation</button>
+</p>
+<small>Countries act automatically. Wars use best-of-three D6 battles between land-border neighbors.</small>
+</div>
 </section>
 <section class="panel" style="margin-top:12px">
- <div class="heading">COUNTRY INTELLIGENCE</div>
- <div class="pad" id="info" class="muted">Select a country on the map.</div>
+<div class="heading">COUNTRY INTELLIGENCE</div>
+<div class="pad" id="info">Select a country on the map.</div>
 </section>
 <section class="panel" style="margin-top:12px">
- <div class="heading">EVENT LOG</div>
- <div class="pad" id="log"><small>Waiting for map data…</small></div>
+<div class="heading">EVENT LOG</div>
+<div class="pad" id="log"><small>Waiting for map data…</small></div>
 </section>
 </aside>
 </main>
@@ -81,187 +81,195 @@ button.primary{background:var(--gold);color:#211607;border-color:var(--gold)}
 (()=>{
 "use strict";
 const $=id=>document.getElementById(id);
-const NS="http://www.w3.org/2000/svg";
-const palette=["#477fb7","#64a083","#9676b9","#c57b61","#48a8a5","#b39a4f","#7f91ad","#bd739c"];
-// ISO numeric country ID -> ISO alpha-2 code and display name.
-const DB={
-4:["af","Afghanistan"],8:["al","Albania"],12:["dz","Algeria"],24:["ao","Angola"],32:["ar","Argentina"],36:["au","Australia"],40:["at","Austria"],50:["bd","Bangladesh"],56:["be","Belgium"],64:["bt","Bhutan"],68:["bo","Bolivia"],70:["ba","Bosnia and Herzegovina"],72:["bw","Botswana"],76:["br","Brazil"],100:["bg","Bulgaria"],104:["mm","Myanmar"],108:["bi","Burundi"],116:["kh","Cambodia"],120:["cm","Cameroon"],124:["ca","Canada"],140:["cf","Central African Republic"],144:["lk","Sri Lanka"],148:["td","Chad"],152:["cl","Chile"],156:["cn","China"],170:["co","Colombia"],178:["cg","Republic of the Congo"],180:["cd","Democratic Republic of the Congo"],188:["cr","Costa Rica"],191:["hr","Croatia"],192:["cu","Cuba"],196:["cy","Cyprus"],203:["cz","Czechia"],204:["bj","Benin"],208:["dk","Denmark"],214:["do","Dominican Republic"],218:["ec","Ecuador"],222:["sv","El Salvador"],231:["et","Ethiopia"],232:["er","Eritrea"],233:["ee","Estonia"],246:["fi","Finland"],250:["fr","France"],266:["ga","Gabon"],268:["ge","Georgia"],276:["de","Germany"],288:["gh","Ghana"],300:["gr","Greece"],320:["gt","Guatemala"],324:["gn","Guinea"],328:["gy","Guyana"],332:["ht","Haiti"],340:["hn","Honduras"],348:["hu","Hungary"],356:["in","India"],360:["id","Indonesia"],364:["ir","Iran"],368:["iq","Iraq"],372:["ie","Ireland"],376:["il","Israel"],380:["it","Italy"],384:["ci","Ivory Coast"],388:["jm","Jamaica"],392:["jp","Japan"],398:["kz","Kazakhstan"],400:["jo","Jordan"],404:["ke","Kenya"],408:["kp","North Korea"],410:["kr","South Korea"],414:["kw","Kuwait"],417:["kg","Kyrgyzstan"],418:["la","Laos"],422:["lb","Lebanon"],426:["ls","Lesotho"],428:["lv","Latvia"],430:["lr","Liberia"],434:["ly","Libya"],440:["lt","Lithuania"],450:["mg","Madagascar"],454:["mw","Malawi"],458:["my","Malaysia"],466:["ml","Mali"],478:["mr","Mauritania"],484:["mx","Mexico"],496:["mn","Mongolia"],498:["md","Moldova"],499:["me","Montenegro"],504:["ma","Morocco"],508:["mz","Mozambique"],512:["om","Oman"],516:["na","Namibia"],524:["np","Nepal"],528:["nl","Netherlands"],540:["nc","New Caledonia"],548:["vu","Vanuatu"],554:["nz","New Zealand"],558:["ni","Nicaragua"],562:["ne","Niger"],566:["ng","Nigeria"],578:["no","Norway"],586:["pk","Pakistan"],591:["pa","Panama"],598:["pg","Papua New Guinea"],600:["py","Paraguay"],604:["pe","Peru"],608:["ph","Philippines"],616:["pl","Poland"],620:["pt","Portugal"],624:["gw","Guinea-Bissau"],626:["tl","Timor-Leste"],634:["qa","Qatar"],642:["ro","Romania"],643:["ru","Russia"],646:["rw","Rwanda"],682:["sa","Saudi Arabia"],686:["sn","Senegal"],688:["rs","Serbia"],694:["sl","Sierra Leone"],703:["sk","Slovakia"],705:["si","Slovenia"],706:["so","Somalia"],710:["za","South Africa"],716:["zw","Zimbabwe"],724:["es","Spain"],728:["ss","South Sudan"],729:["sd","Sudan"],740:["sr","Suriname"],748:["sz","Eswatini"],752:["se","Sweden"],756:["ch","Switzerland"],760:["sy","Syria"],762:["tj","Tajikistan"],764:["th","Thailand"],768:["tg","Togo"],780:["tt","Trinidad and Tobago"],784:["ae","United Arab Emirates"],788:["tn","Tunisia"],792:["tr","Turkey"],795:["tm","Turkmenistan"],800:["ug","Uganda"],804:["ua","Ukraine"],807:["mk","North Macedonia"],818:["eg","Egypt"],826:["gb","United Kingdom"],834:["tz","Tanzania"],840:["us","United States"],854:["bf","Burkina Faso"],858:["uy","Uruguay"],860:["uz","Uzbekistan"],862:["ve","Venezuela"],887:["ye","Yemen"],894:["zm","Zambia"],51:["am","Armenia"],31:["az","Azerbaijan"],44:["bs","Bahamas"],48:["bh","Bahrain"],84:["bz","Belize"],96:["bn","Brunei"],132:["cv","Cabo Verde"],175:["yt","Mayotte"],262:["dj","Djibouti"],266:["ga","Gabon"],275:["ps","Palestine"],292:["gi","Gibraltar"],304:["gl","Greenland"],312:["gp","Guadeloupe"],316:["gu","Guam"],344:["hk","Hong Kong"],474:["mq","Martinique"],478:["mr","Mauritania"],531:["cw","Curacao"],535:["bq","Caribbean Netherlands"],583:["fm","Micronesia"],585:["pw","Palau"],646:["rw","Rwanda"],659:["kn","Saint Kitts and Nevis"],660:["ai","Anguilla"],662:["lc","Saint Lucia"],670:["vc","Saint Vincent and the Grenadines"],674:["sm","San Marino"],678:["st","Sao Tome and Principe"],690:["sc","Seychelles"],702:["sg","Singapore"],740:["sr","Suriname"],882:["ws","Samoa"]
+const colors=["#477fb7","#64a083","#9676b9","#c57b61","#48a8a5","#b39a4f","#7f91ad","#bd739c"];
+const fallbackISO={
+4:"af",8:"al",12:"dz",24:"ao",28:"ag",32:"ar",36:"au",40:"at",44:"bs",48:"bh",50:"bd",51:"am",52:"bb",56:"be",64:"bt",68:"bo",70:"ba",72:"bw",76:"br",84:"bz",90:"sb",96:"bn",100:"bg",104:"mm",108:"bi",112:"by",116:"kh",120:"cm",124:"ca",132:"cv",140:"cf",144:"lk",148:"td",152:"cl",156:"cn",158:"tw",170:"co",174:"km",178:"cg",180:"cd",188:"cr",191:"hr",192:"cu",196:"cy",203:"cz",204:"bj",208:"dk",214:"do",218:"ec",222:"sv",231:"et",232:"er",233:"ee",242:"fj",246:"fi",250:"fr",262:"dj",266:"ga",268:"ge",270:"gm",288:"gh",300:"gr",308:"gd",320:"gt",324:"gn",328:"gy",332:"ht",340:"hn",344:"hk",348:"hu",352:"is",356:"in",360:"id",364:"ir",368:"iq",372:"ie",376:"il",380:"it",384:"ci",388:"jm",392:"jp",398:"kz",400:"jo",404:"ke",408:"kp",410:"kr",414:"kw",417:"kg",418:"la",422:"lb",426:"ls",428:"lv",430:"lr",434:"ly",440:"lt",442:"lu",450:"mg",454:"mw",458:"my",462:"mv",466:"ml",470:"mt",478:"mr",480:"mu",484:"mx",496:"mn",498:"md",499:"me",504:"ma",508:"mz",512:"om",516:"na",524:"np",528:"nl",540:"nc",548:"vu",554:"nz",558:"ni",562:"ne",566:"ng",578:"no",583:"fm",584:"mh",585:"pw",586:"pk",591:"pa",598:"pg",600:"py",604:"pe",608:"ph",616:"pl",620:"pt",624:"gw",626:"tl",634:"qa",642:"ro",643:"ru",646:"rw",659:"kn",662:"lc",670:"vc",674:"sm",678:"st",682:"sa",686:"sn",688:"rs",690:"sc",694:"sl",702:"sg",703:"sk",704:"vn",705:"si",706:"so",710:"za",716:"zw",724:"es",728:"ss",729:"sd",740:"sr",748:"sz",752:"se",756:"ch",760:"sy",762:"tj",764:"th",768:"tg",780:"tt",784:"ae",788:"tn",792:"tr",795:"tm",800:"ug",804:"ua",807:"mk",818:"eg",826:"gb",834:"tz",840:"us",854:"bf",858:"uy",860:"uz",862:"ve",887:"ye",894:"zm"
 };
 const flagURL=code=>"https://flagcdn.com/w320/"+code+".png";
-let countries=[],features=[],neighborSets=[],svg=null,path=null,projection=null;
-let running=false,timer=null,year=2026,wars=0,conquests=0,selected=null,serial=0;
+let countries=[],features=[],neighbors=[],svg=null,path=null;
+let running=false,timer=null,year=2026,wars=0,conquests=0,selected=null;
 function log(message){
- const box=$("log");if(box.querySelector("small"))box.innerHTML="";
- const item=document.createElement("div");item.className="entry";item.textContent="Year "+year+" — "+message;box.prepend(item);
+ const box=$("log");
+ if(box.querySelector("small"))box.innerHTML="";
+ const item=document.createElement("div");
+ item.className="entry";
+ item.textContent="Year "+year+" — "+message;
+ box.prepend(item);
  while(box.children.length>70)box.lastChild.remove();
 }
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-function ownerOf(c){return countries.find(x=>x.key===c.owner)||c}
-function activeOwners(){return new Set(countries.map(c=>c.owner))}
+function ownerOf(c){
+ let current=c,seen=new Set();
+ while(current&&current.owner!==current.key&&!seen.has(current.key)){
+  seen.add(current.key);
+  const next=countries.find(x=>x.key===current.owner);
+  if(!next)break;
+  current=next;
+ }
+ return current||c;
+}
+function isoOf(c){const owner=ownerOf(c);return owner.iso||fallbackISO[owner.num]||""}
+function flagOf(c){const iso=isoOf(c);return iso?flagURL(iso):""}
+function empireCount(){return new Set(countries.map(c=>ownerOf(c).key)).size}
 function stats(){
  $("year").textContent=year;$("wars").textContent=wars;
- $("empires").textContent=activeOwners().size;$("conquests").textContent=conquests;
-}
-function countryFlag(c){
- const code=DB[c.numeric]?.[0];
- return code?flagURL(code):"";
+ $("empires").textContent=empireCount();$("conquests").textContent=conquests;
 }
 function showInfo(c){
- selected=c;if(!c){$("info").textContent="Select a country on the map.";return}
- const ruler=ownerOf(c),flag=countryFlag(ruler);
+ selected=c;
+ if(!c){$("info").textContent="Select a country on the map.";return}
+ const ruler=ownerOf(c),flag=flagOf(c);
  $("info").innerHTML=(flag?'<img src="'+flag+'" alt="" onerror="this.style.display=\'none\'">':'')+
  '<b>'+esc(c.name)+'</b><br>Controller: <b>'+esc(ruler.name)+'</b><br>'+
  'Population index: <b>'+Math.round(c.population).toLocaleString()+'</b><br>'+
- 'Military strength: <b>'+Math.round(c.military)+'</b><br>'+
- 'Equipment readiness: <b>'+Math.round(c.equipment)+'%</b><br>'+
+ 'Military strength: <b>'+Math.round(ruler.military)+'</b><br>'+
+ 'Equipment readiness: <b>'+Math.round(ruler.equipment)+'%</b><br>'+
  'Territory score: <b>'+Math.round(c.territory)+'</b><br>'+
- 'Status: <b>'+(c.owner===c.key?'Independent':'Integrated territory')+'</b>'+
+ 'Status: <b>'+(c.owner===c.key?'Independent':'Controlled by '+ruler.name)+'</b>'+
  (c.integration>0?'<br>Integration: '+c.integration+' year(s) remaining':'')+
- '<div class="progress"><span style="width:'+Math.max(0,Math.min(100,c.equipment))+'%"></span></div>';
+ '<div class="progress"><span style="width:'+Math.max(0,Math.min(100,ruler.equipment))+'%"></span></div>';
 }
-function draw(){
+function updateMap(){
  if(!svg)return;
  svg.selectAll(".country").attr("fill",f=>{
-  const c=countries.find(x=>x.key===String(f.id));if(!c)return "#34445a";
-  const code=DB[Number(c.key)]?.[0];
-  return code?"url(#flag-"+c.key+")":palette[Number(c.key)%palette.length];
- }).attr("opacity",f=>{
   const c=countries.find(x=>x.key===String(f.id));
-  return c&&c.integration>0?.8:1;
+  if(!c)return "#34445a";
+  return c.iso?"url(#flag-"+c.key+")":colors[(Number(c.key)||0)%colors.length];
  });
- // Refresh flag images after controller changes.
  countries.forEach(c=>{
   const img=document.getElementById("flagimg-"+c.key);
-  if(img){const ruler=ownerOf(c),url=countryFlag(ruler);if(url&&img.getAttribute("href")!==url)img.setAttribute("href",url)}
+  if(img){
+   const url=flagOf(c);
+   if(url&&img.getAttribute("href")!==url)img.setAttribute("href",url);
+  }
  });
+ if(selected)showInfo(selected);
 }
-function build(topology){
- if(!window.d3||!window.topojson)throw Error("Map libraries did not load. Check your internet connection.");
+function buildMap(topology,geo){
  const object=topology.objects.countries;
  features=topojson.feature(topology,object).features;
- const geoms=object.geometries;
- neighborSets=topojson.neighbors(geoms);
- countries=features.map((f,i)=>{
-  const numeric=Number(f.id),info=DB[numeric]||["","Country "+f.id];
-  const name=info[1];
-  return {key:String(f.id),numeric,name,owner:String(f.id),population:150+Math.random()*850,military:35+Math.random()*65,equipment:65+Math.random()*35,territory:20+Math.random()*80,integration:0,feature:f,index:i};
+ neighbors=topojson.neighbors(object.geometries);
+ const byNumeric=new Map(),byName=new Map();
+ const norm=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
+ (geo.features||[]).forEach(f=>{
+  const p=f.properties||{};
+  const raw=String(p.ISO_N3||p.ISO_N3_EH||p.ADM0_A3||"");
+  const num=Number(raw);
+  const iso=String(p.ISO_A2||p.ISO_A2_EH||"").toLowerCase();
+  const name=p.ADMIN||p.NAME_LONG||p.NAME||"";
+  if(Number.isFinite(num)&&num>=0&&/^[a-z]{2}$/.test(iso))byNumeric.set(String(num),{iso,name});
+  if(name&&/^[a-z]{2}$/.test(iso))byName.set(norm(name),{iso,name});
  });
- const map=$("map");svg=d3.select(map);svg.selectAll("*").remove();
- projection=d3.geoNaturalEarth1().fitExtent([[5,5],[955,535]],{type:"FeatureCollection",features});
+ countries=features.map((f,i)=>{
+  const num=Number(f.id),key=String(f.id);
+  const meta=byNumeric.get(String(num));
+  const name=meta?.name||byName.get(norm(f.properties?.name))?.name||"Country "+key;
+  const iso=meta?.iso||fallbackISO[num]||byName.get(norm(name))?.iso||"";
+  return {key,num,name,iso,owner:key,population:150+Math.random()*850,military:35+Math.random()*65,equipment:65+Math.random()*35,territory:20+Math.random()*80,integration:0,index:i,feature:f};
+ });
+ svg=d3.select("#map");svg.selectAll("*").remove();
+ const projection=d3.geoNaturalEarth1().fitExtent([[5,5],[955,535]],{type:"FeatureCollection",features});
  path=d3.geoPath(projection);
  const defs=svg.append("defs");
- // Each country's image is clipped to its real geographic outline.
- features.forEach((f,i)=>{
-  const c=countries[i],code=DB[c.numeric]?.[0];
-  if(!code)return;
-  const d=path(f);if(!d)return;
-  const clip=defs.append("clipPath").attr("id","clip-"+c.key).attr("clipPathUnits","userSpaceOnUse");
-  clip.append("path").attr("d",d);
-  const b=path.bounds(f);
-  const pattern=defs.append("pattern").attr("id","flag-"+c.key).attr("patternUnits","userSpaceOnUse").attr("x",b[0][0]).attr("y",b[0][1]).attr("width",Math.max(1,b[1][0]-b[0][0])).attr("height",Math.max(1,b[1][1]-b[0][1]));
-  pattern.append("image").attr("id","flagimg-"+c.key).attr("href",flagURL(code)).attr("x",b[0][0]).attr("y",b[0][1]).attr("width",Math.max(1,b[1][0]-b[0][0])).attr("height",Math.max(1,b[1][1]-b[0][1])).attr("preserveAspectRatio","none");
+ countries.forEach(c=>{
+  const b=path.bounds(c.feature),w=Math.max(1,b[1][0]-b[0][0]),h=Math.max(1,b[1][1]-b[0][1]);
+  const clip=defs.append("clipPath").attr("id","clip-"+c.key);
+  clip.append("path").attr("d",path(c.feature));
+  const pattern=defs.append("pattern").attr("id","flag-"+c.key).attr("patternUnits","userSpaceOnUse").attr("x",b[0][0]).attr("y",b[0][1]).attr("width",w).attr("height",h);
+  pattern.append("image").attr("id","flagimg-"+c.key).attr("href",c.iso?flagURL(c.iso):"").attr("x",b[0][0]).attr("y",b[0][1]).attr("width",w).attr("height",h).attr("preserveAspectRatio","none").attr("clip-path","url(#clip-"+c.key+")");
  });
  svg.append("g").selectAll("path").data(features).join("path")
   .attr("class","country").attr("d",path)
   .attr("fill",f=>{
-   const c=countries.find(x=>x.key===String(f.id));return c&&DB[c.numeric]?.[0]?"url(#flag-"+c.key+")":"#34445a";
+   const c=countries.find(x=>x.key===String(f.id));
+   return c&&c.iso?"url(#flag-"+c.key+")":colors[(Number(f.id)||0)%colors.length];
   })
-  .on("click",(event,f)=>{const c=countries.find(x=>x.key===String(f.id));if(c)showInfo(c)});
+  .on("click",(e,f)=>{const c=countries.find(x=>x.key===String(f.id));if(c)showInfo(c)});
  svg.append("path").datum(topojson.mesh(topology,object,(a,b)=>a!==b))
-  .attr("fill","none").attr("stroke","#0a1422").attr("stroke-width",.55).attr("d",path).attr("pointer-events","none");
+  .attr("fill","none").attr("stroke","#09111e").attr("stroke-width",.55).attr("d",path).attr("pointer-events","none");
  ["start","next","pause","reset"].forEach(id=>$(id).disabled=false);
- $("status").textContent="World map ready";stats();log("World initialized. National flag textures are loading.");
+ $("status").textContent="World map ready";
+ stats();log("World map loaded. National flags are initializing.");
 }
-function getWarPairs(){
+function eligiblePairs(){
  const pairs=[];
- countries.forEach((a,i)=>{
-  neighborSets[i].forEach(j=>{
-   const b=countries[j];if(!b||a.owner===b.owner)return;
-   // A territory undergoing integration cannot immediately launch another war.
-   if(a.integration>0||b.integration>0)return;
-   pairs.push([a,b]);
-  });
- });
+ countries.forEach((a,i)=>neighbors[i].forEach(j=>{
+  const b=countries[j];
+  if(!b||ownerOf(a).key===ownerOf(b).key)return;
+  if(a.integration>0||b.integration>0)return;
+  pairs.push([a,b]);
+ }));
  return pairs;
 }
-function multiplier(pop){return .7+Math.log10(Math.max(1,pop))/4}
-function battleScore(c,roll){
- const owner=ownerOf(c);
- const militaryFactor=Math.max(.2,owner.military/65)*(Math.max(.25,owner.equipment/100));
- return roll*multiplier(owner.population)*militaryFactor;
+function score(c,roll){
+ const ruler=ownerOf(c);
+ return roll*(.7+Math.log10(Math.max(1,ruler.population))/4)*
+ Math.max(.2,ruler.military/65)*Math.max(.25,ruler.equipment/100);
 }
 function battle(a,b){
- let aw=0,bw=0,rounds=[];
- for(let i=0;i<3&&aw<2&&bw<2;i++){
-  const ar=1+Math.floor(Math.random()*6),br=1+Math.floor(Math.random()*6);
-  const ap=battleScore(a,ar),bp=battleScore(b,br);
-  if(ap>=bp)aw++;else bw++;
-  rounds.push("Round "+(i+1)+": "+ar+" vs "+br);
+ let winsA=0,winsB=0,rounds=[];
+ for(let i=0;i<3&&winsA<2&&winsB<2;i++){
+  const ra=1+Math.floor(Math.random()*6),rb=1+Math.floor(Math.random()*6);
+  if(score(a,ra)>=score(b,rb))winsA++;else winsB++;
+  rounds.push(ra+"–"+rb);
  }
- if(aw===bw){if(Math.random()<.5)aw++;else bw++}
- return {winner:aw>bw?a:b,loser:aw>bw?b:a,rounds};
+ if(winsA===winsB){if(Math.random()<.5)winsA++;else winsB++}
+ return {winner:winsA>winsB?a:b,loser:winsA>winsB?b:a,rounds};
 }
-function war(){
- const pairs=getWarPairs();
- if(!pairs.length){stop();log("No eligible neighboring rival territories remain. The map is unified or all frontiers are integrating.");return}
+function runWar(){
+ const pairs=eligiblePairs();
+ if(!pairs.length){stop();log("No eligible rival neighbors remain.");return}
  const [a,b]=pairs[Math.floor(Math.random()*pairs.length)];
- const result=battle(a,b),winner=result.winner,loser=result.loser;
+ const result=battle(a,b);
+ const winner=ownerOf(result.winner),loser=ownerOf(result.loser);
  wars++;year++;
- const attacker=ownerOf(a),defender=ownerOf(b);
- const winnerOwner=ownerOf(winner),loserOwner=ownerOf(loser);
- // Losses apply to both participating controllers.
- const winnerLoss=3+Math.random()*8,loserLoss=7+Math.random()*15;
- winnerOwner.military=Math.max(5,winnerOwner.military-winnerLoss);
- loserOwner.military=Math.max(2,loserOwner.military-loserLoss);
- winnerOwner.equipment=Math.max(20,winnerOwner.equipment-(2+Math.random()*5));
- loserOwner.equipment=Math.max(10,loserOwner.equipment-(5+Math.random()*10));
- winnerOwner.population=Math.max(1,winnerOwner.population-(1+Math.random()*4));
- loserOwner.population=Math.max(1,loserOwner.population-(3+Math.random()*8));
- let msg=winnerOwner.name+" defeated "+loserOwner.name+" in a best-of-three D6 battle. "+result.rounds.join("; ")+".";
- // Conquest is the default outcome of winning a frontier battle.
- if(Math.random()<.78){
-  loser.owner=winnerOwner.key;loser.integration=3;loser.territory=Math.max(1,loser.territory);
-  winnerOwner.territory+=loser.territory;conquests++;
-  msg+=" Territory captured: "+loser.name+". Its flag now follows "+winnerOwner.name+".";
- }else{
-  msg+=" The defender retained the territory.";
- }
+ winner.military=Math.max(5,winner.military-(3+Math.random()*8));
+ loser.military=Math.max(2,loser.military-(7+Math.random()*15));
+ winner.equipment=Math.max(20,winner.equipment-(2+Math.random()*5));
+ loser.equipment=Math.max(10,loser.equipment-(5+Math.random()*10));
+ winner.population=Math.max(1,winner.population-(1+Math.random()*4));
+ loser.population=Math.max(1,loser.population-(3+Math.random()*8));
+ let message=winner.name+" defeated "+loser.name+". D6 rounds: "+result.rounds.join(", ")+".";
+ if(Math.random()<.82){
+  // Transfer the actual defeated territory to the winning empire.
+  // It stays on the map; its pattern image changes to the controller's flag.
+  result.loser.owner=winner.key;
+  result.loser.integration=1;
+  winner.territory+=result.loser.territory;
+  conquests++;
+  message+=" "+winner.name+" conquered "+result.loser.name+". Its land remains visible under the victor's flag.";
+ }else message+=" The defender held its territory.";
  countries.forEach(c=>{
   if(c.integration>0)c.integration--;
-  if(c.integration===0&&c.owner!==c.key)c.military=Math.max(8,c.military*.97);
-  // Recovery between years.
   c.equipment=Math.min(100,c.equipment+3);
   c.military=Math.min(130,c.military+1.5);
  });
- stats();draw();log(msg);if(selected)showInfo(selected);
+ stats();updateMap();log(message);
 }
-function stop(){
- running=false;if(timer)clearInterval(timer);timer=null;$("start").textContent="▶ Start";
-}
-function start(){
- if(running)return;running=true;$("start").textContent="Ⅱ Running";
- timer=setInterval(war,2600);
-}
+function stop(){running=false;if(timer)clearInterval(timer);timer=null;$("start").textContent="▶ Start"}
+function start(){if(running)return;running=true;$("start").textContent="Ⅱ Running";timer=setInterval(runWar,2600)}
 function reset(){
  stop();year=2026;wars=0;conquests=0;selected=null;
  countries.forEach(c=>{c.owner=c.key;c.population=150+Math.random()*850;c.military=35+Math.random()*65;c.equipment=65+Math.random()*35;c.territory=20+Math.random()*80;c.integration=0});
- $("log").innerHTML="";showInfo(null);stats();draw();log("New simulation created. All countries are independent again.");
+ $("log").innerHTML="";showInfo(null);stats();updateMap();log("New simulation started. Every country is independent again.");
 }
 $("start").onclick=()=>running?stop():start();
-$("next").onclick=war;
+$("next").onclick=runWar;
 $("pause").onclick=()=>{if(running){stop();$("pause").textContent="▶ Resume"}else{start();$("pause").textContent="Ⅱ Pause"}};
 $("reset").onclick=()=>{reset();$("pause").textContent="Ⅱ Pause"};
 async function init(){
  try{
-  const [d3lib,topolib]=[window.d3,window.topojson];
-  if(!d3lib||!topolib)throw Error("Map libraries failed to load.");
-  const data=await d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json");
-  if(!data?.objects?.countries)throw Error("The world map data is missing or invalid.");
-  build(data);
+  if(!window.d3||!window.topojson)throw Error("Map libraries did not load.");
+  const [topology,geo]=await Promise.all([
+   d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json"),
+   d3.json("https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson")
+  ]);
+  if(!topology?.objects?.countries)throw Error("World map data is invalid.");
+  buildMap(topology,geo);
  }catch(e){
   $("status").textContent="Map failed to load";
-  $("map").innerHTML='<text x="480" y="250" text-anchor="middle" fill="#ffaaaa" font-size="18">Map error</text>';
-  $("log").textContent="Could not load the world map: "+(e.message||String(e));
+  $("map").innerHTML='<text x="480" y="250" text-anchor="middle" fill="#ffaaaa" font-size="18">Map data failed to load</text>';
+  $("log").textContent="Map error: "+(e.message||String(e));
  }
 }
 init();
